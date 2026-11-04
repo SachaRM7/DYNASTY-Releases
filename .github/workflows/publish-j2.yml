@@ -1,0 +1,45 @@
+name: Publish verified J2 downloads
+
+on:
+  workflow_dispatch:
+    inputs:
+      portable_url:
+        description: Temporary HTTPS URL of the already tested Portable ZIP
+        required: true
+        type: string
+      installer_url:
+        description: Temporary HTTPS URL of the already tested Installer ZIP
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-j2-0.3.0
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Download exact previously tested files and verify all hashes
+        env:
+          DYNASTY_PORTABLE_URL: ${{ inputs.portable_url }}
+          DYNASTY_INSTALLER_URL: ${{ inputs.installer_url }}
+        run: python3 scripts/prepare-j2-downloads.py
+      - name: Attach files to the existing draft without replacing assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test "$(gh release view v0.3.0 --json isDraft --jq .isDraft)" = true
+          gh release upload v0.3.0 downloads/*
+      - name: Publish tested prototype release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release edit v0.3.0 --draft=false --prerelease
