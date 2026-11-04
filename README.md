@@ -9,7 +9,9 @@ Distributions de test du prototype **DYNASTY: A Century of Power**.
 
 Les deux versions partagent le profil `%APPDATA%\DYNASTY-Prototype` et l'origine `dynasty://game/`. Avant de changer de version, exporter la partie en JSON depuis **Sauvegardes et réglages**. Ne pas supprimer ce profil.
 
-Les exécutables J2 0.3.0 sont des versions de test **non signées**. Les mises à jour automatiques restent désactivées jusqu'à la configuration de la signature Windows et à la validation d'une mise à jour réelle. Les sommes SHA-256 permettent de vérifier l'intégrité des téléchargements.
+Les exécutables J2.5 0.3.1 sont des versions de test **non signées**. Les mises à jour automatiques restent désactivées jusqu'à la configuration de la signature Windows et à la validation d'une mise à jour réelle. Les sommes SHA-256 permettent de vérifier l'intégrité des téléchargements.
+
+J2.5 conserve les mécaniques J2 et ajoute le HUD, une minicarte interactive et un journal limité aux informations reçues. Organisation, Ville et Pays restent à venir.
 
 Ce dépôt public est réservé aux distributions. Le dépôt de développement reste privé.
 
