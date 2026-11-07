@@ -1,45 +1,178 @@
-name: Publish verified J2 downloads
+name: Verify Proto 2 Windows distribution
 
 on:
   workflow_dispatch:
     inputs:
       portable_url:
-        description: Temporary HTTPS URL of the already tested Portable ZIP
+        description: Draft tag holding the private validation bundle
         required: true
         type: string
       installer_url:
-        description: Temporary HTTPS URL of the already tested Installer ZIP
+        description: Expected SHA-256 of the private validation bundle
         required: true
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: publish-j2-0.3.0
+  group: proto2-windows-0.6.0
   cancel-in-progress: false
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+  build-and-test:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      DYNASTY_SOURCE_SHA: 91ac8582a6342afddf6e8de930f53a0b40c48d7a
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Download exact previously tested files and verify all hashes
-        env:
-          DYNASTY_PORTABLE_URL: ${{ inputs.portable_url }}
-          DYNASTY_INSTALLER_URL: ${{ inputs.installer_url }}
-        run: python3 scripts/prepare-j2-downloads.py
-      - name: Attach files to the existing draft without replacing assets
+      - name: Retrieve private validation bundle from an unpublished draft
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          CANDIDATE_TAG: ${{ inputs.portable_url }}
+          CANDIDATE_HASH: ${{ inputs.installer_url }}
         run: |
-          set -euo pipefail
-          test "$(gh release view v0.3.0 --json isDraft --jq .isDraft)" = true
-          gh release upload v0.3.0 downloads/*
-      - name: Publish tested prototype release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: gh release edit v0.3.0 --draft=false --prerelease
+          if ($env:CANDIDATE_TAG -ne 'v0.6.0') { throw 'Unexpected candidate tag' }
+          if ($env:CANDIDATE_HASH -ne '2e0111d6a447357e5cf0fdf3d599fe84e9d6f7ce4dd7b200adc010fceb8b400f') { throw 'Unexpected candidate checksum' }
+          if ((gh release view $env:CANDIDATE_TAG --json isDraft --jq .isDraft) -ne 'true') { throw 'Source bundle must remain in a private draft' }
+          gh release download $env:CANDIDATE_TAG --pattern dynasty-proto2-validation-source.zip --dir staging
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ((Get-FileHash staging/dynasty-proto2-validation-source.zip -Algorithm SHA256).Hash.ToLower() -ne $env:CANDIDATE_HASH) { throw 'Bundle hash mismatch' }
+          Expand-Archive staging/dynasty-proto2-validation-source.zip -DestinationPath . -Force
+          $source = Get-Content SOURCE.json | ConvertFrom-Json
+          if ($source.source -ne $env:DYNASTY_SOURCE_SHA -or $source.historicalJ1 -ne 'd25802826ff908ed0eb4135153b4b73c20045c50') { throw 'Unexpected source revision' }
+          Remove-Item staging/dynasty-proto2-validation-source.zip
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            prototype/web/package-lock.json
+            prototype/desktop/package-lock.json
+      - name: Install dependencies and prepare evidence
+        run: |
+          New-Item -ItemType Directory -Force reports/proto2 | Out-Null
+          npm --prefix prototype/web ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix prototype/desktop ci
+      - name: Test simulation and update safeguards
+        run: |
+          npm --prefix prototype/web test 2>&1 | Tee-Object reports/proto2/unit-windows.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix prototype/desktop run test:updates 2>&1 | Tee-Object reports/proto2/updates-windows.txt
+      - name: Prepare standalone game
+        run: npm --prefix prototype/desktop run prepare:app
+      - name: Install test browser
+        working-directory: prototype/web
+        run: npx playwright install chromium
+      - name: Test browser and standalone HTML on Windows
+        working-directory: prototype/web
+        run: |
+          npm run test:e2e 2>&1 | Tee-Object ../../reports/proto2/browser-windows.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:standalone 2>&1 | Tee-Object ../../reports/proto2/standalone-windows.txt
+      - name: Build Windows application
+        working-directory: prototype/desktop
+        run: npx electron-builder --win --dir --x64 --publish never
+      - name: Test packaged Windows application, native export and restart bridge
+        run: |
+          node prototype/desktop/scripts/check-package.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix prototype/desktop run test:desktop
+      - name: Package Portable and NSIS installer
+        working-directory: prototype/desktop
+        run: npx electron-builder --prepackaged dist/win-unpacked --win portable nsis --x64 --publish never
+      - name: Build next-version installer fixture (test only, not published)
+        working-directory: prototype/desktop
+        run: npx electron-builder --win nsis --x64 --publish never --config.extraMetadata.version=0.6.1 --config.directories.output=dist/upgrade-fixture
+      - name: Build historical J1 without changing its code or lockfiles
+        run: |
+          npm --prefix historical-j1/prototype/web ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix historical-j1/prototype/desktop ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm --prefix historical-j1/prototype/desktop run build:windows
+      - name: Download verified previous J2 installer for the real HUD upgrade test
+        run: |
+          $previous = 'prototype/desktop/dist/DYNASTY-Setup-0.3.0-x64.exe'
+          Invoke-WebRequest 'https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.3.0/DYNASTY-Setup-0.3.0-x64.exe' -OutFile $previous
+          if ((Get-FileHash $previous -Algorithm SHA256).Hash.ToLower() -ne '4b1a8114a4fcbc4f0c8f5868025787b6290f86323be87ac0946da3da710b176b') { throw 'Previous J2 installer hash mismatch' }
+          $previousHud = 'prototype/desktop/dist/DYNASTY-Setup-0.3.1-x64.exe'
+          Invoke-WebRequest 'https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.3.1/DYNASTY-Setup-0.3.1-x64.exe' -OutFile $previousHud
+          if ((Get-FileHash $previousHud -Algorithm SHA256).Hash.ToLower() -ne 'd32916ba0b647eca59e9c4ad74767e0633fb9ed452512b47882a133d27f7c018') { throw 'Previous HUD installer hash mismatch' }
+      - name: Download published 0.3.2 Portable and Installer for J3 migrations
+        run: |
+          $previousPortable = 'prototype/desktop/dist/DYNASTY-0.3.2-Windows-x64.exe'
+          Invoke-WebRequest 'https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.3.2/DYNASTY-0.3.2-Windows-x64.exe' -OutFile $previousPortable
+          if ((Get-FileHash $previousPortable -Algorithm SHA256).Hash.ToLower() -ne 'afed204c08fc6d9a9279ff6e3fe09bface94689fa86175e01077c1cf6552c02e') { throw 'Published 0.3.2 Portable hash mismatch' }
+          $previousInstaller = 'prototype/desktop/dist/DYNASTY-Setup-0.3.2-x64.exe'
+          Invoke-WebRequest 'https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.3.2/DYNASTY-Setup-0.3.2-x64.exe' -OutFile $previousInstaller
+          if ((Get-FileHash $previousInstaller -Algorithm SHA256).Hash.ToLower() -ne 'e85a140703a9617fd7ae90bb084ebe445156a78fbd24cffe9146efd1b89795f8') { throw 'Published 0.3.2 Installer hash mismatch' }
+      - name: Download published 0.4.0 Portable and Installer for J3.5 upgrade checks
+        run: |
+          $j3Portable = 'prototype/desktop/dist/DYNASTY-0.4.0-Windows-x64.exe'
+          Invoke-WebRequest 'https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.4.0/DYNASTY-0.4.0-Windows-x64.exe' -OutFile $j3Portable
+          if ((Get-FileHash $j3Portable -Algorithm SHA256).Hash.ToLower() -ne '9b11b21c773b56da5c96bd0f222cf22c5ae04a93d151dbeec3a913c7f6eeaa8a') { throw 'Published 0.4.0 Portable hash mismatch' }
+          $j3Installer = 'prototype/desktop/dist/DYNASTY-Setup-0.4.0-x64.exe'
+          Invoke-WebRequest 'https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.4.0/DYNASTY-Setup-0.4.0-x64.exe' -OutFile $j3Installer
+          if ((Get-FileHash $j3Installer -Algorithm SHA256).Hash.ToLower() -ne '9df863ac140dfbb813780db54d744fb9cd470dc442b1c47b5dadf56c9508d62b') { throw 'Published 0.4.0 Installer hash mismatch' }
+      - name: Download published 0.4.1 Portable and Installer for J4 upgrade checks
+        run: |
+          $j35Portable = 'prototype/desktop/dist/DYNASTY-0.4.1-Windows-x64.exe'
+          Invoke-WebRequest 'https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.4.1/DYNASTY-0.4.1-Windows-x64.exe' -OutFile $j35Portable
+          if ((Get-FileHash $j35Portable -Algorithm SHA256).Hash.ToLower() -ne 'fd83e5c522618aad78242ecde12ae5dd4f9787bec2a01d0b3402a3d267676657') { throw 'Published 0.4.1 Portable hash mismatch' }
+          $j35Installer = 'prototype/desktop/dist/DYNASTY-Setup-0.4.1-x64.exe'
+          Invoke-WebRequest 'https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.4.1/DYNASTY-Setup-0.4.1-x64.exe' -OutFile $j35Installer
+          if ((Get-FileHash $j35Installer -Algorithm SHA256).Hash.ToLower() -ne 'be0c95446cdb192070097327f9b64e0e5b4756261dc14fe4110e47b2314f6361') { throw 'Published 0.4.1 Installer hash mismatch' }
+      - name: Download published 0.5.0 for the real Proto 2 upgrade test
+        run: |
+          $j4Portable = 'prototype/desktop/dist/DYNASTY-0.5.0-Windows-x64.exe'
+          Invoke-WebRequest 'https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.5.0/DYNASTY-0.5.0-Windows-x64.exe' -OutFile $j4Portable
+          if ((Get-FileHash $j4Portable -Algorithm SHA256).Hash.ToLower() -ne 'cbc5c6933dc33dec3f39f1ee83c15399fdb2f55e4e7ed49e1c9c16670a0d76e4') { throw 'Published 0.5.0 Portable hash mismatch' }
+          $j4Installer = 'prototype/desktop/dist/DYNASTY-Setup-0.5.0-x64.exe'
+          Invoke-WebRequest 'https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.5.0/DYNASTY-Setup-0.5.0-x64.exe' -OutFile $j4Installer
+          if ((Get-FileHash $j4Installer -Algorithm SHA256).Hash.ToLower() -ne 'eb2add0e29c5be48803126af98bef5fd9f60d60b91542bfef36e05a7d3cb6a13') { throw 'Published 0.5.0 Installer hash mismatch' }
+      - name: Execute actual Portable, Installer and save-preserving upgrade
+        run: npm --prefix prototype/desktop run test:distribution
+      - name: Package instructions, checksums and separate download folders
+        run: npm --prefix prototype/desktop run package:downloads
+      - name: Attach Portable archive
+        id: portable
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: DYNASTY-0.6.0-Portable-Windows-x64
+          path: prototype/desktop/dist/downloads/portable/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Attach Installer archive
+        id: installer
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: DYNASTY-0.6.0-Installer-Windows-x64
+          path: prototype/desktop/dist/downloads/installer/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Record download URLs
+        run: |
+          'Portable: ${{ steps.portable.outputs.artifact-url }}' >> $env:GITHUB_STEP_SUMMARY
+          'Installer: ${{ steps.installer.outputs.artifact-url }}' >> $env:GITHUB_STEP_SUMMARY
+          'Test artifacts retained for 14 days. Source bundle remains in an unpublished draft. Automatic updates disabled.' >> $env:GITHUB_STEP_SUMMARY
+          Get-Content prototype/desktop/dist/SHA256SUMS.txt >> $env:GITHUB_STEP_SUMMARY
+      - name: Attach execution evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-proto2-evidence
+          path: |
+            reports/proto2/
+            reports/proto2-complete/
+            prototype/web/test-results/
+            prototype/desktop/dist/SHA256SUMS.txt
+          retention-days: 14
