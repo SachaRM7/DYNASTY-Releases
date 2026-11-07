@@ -1,8 +1,8 @@
 {
-  "source": "91ac8582a6342afddf6e8de930f53a0b40c48d7a",
-  "gameSource": "a471bf88141f0a82e7651691181a7666f0c9cba3",
+  "source": "6d3cf1bdc5cc302621fb61616973b8c831369a77",
+  "gameSource": "6d3cf1bdc5cc302621fb61616973b8c831369a77",
   "historicalJ1": "d25802826ff908ed0eb4135153b4b73c20045c50",
-  "htmlSHA256": "431301b4132caa15ff50cd8de8fa7bc32a157ed7386c3fcd928ae5c192ede87c",
-  "version": "0.6.0",
+  "htmlSHA256": "f76c620ce77bdbcf25b970f1e5256abfab5819eb62e27c227fc0aafa9762c309",
+  "version": "0.6.2",
   "content": "Compiled playable HTML, Electron runtime/configuration and distribution test harness. No TypeScript game sources, Drive references or private documents."
 }
