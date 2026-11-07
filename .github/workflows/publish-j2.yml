@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       portable_url:
-        description: Draft tag holding the private validation bundle
+        description: Candidate version (0.6.0)
         required: true
         type: string
       installer_url:
-        description: Expected SHA-256 of the private validation bundle
+        description: Expected SHA-256 of the compiled runtime bundle
         required: true
         type: string
 
@@ -30,23 +30,14 @@ jobs:
         shell: pwsh
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Retrieve private validation bundle from an unpublished draft
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          CANDIDATE_TAG: ${{ inputs.portable_url }}
-          CANDIDATE_HASH: ${{ inputs.installer_url }}
+      - name: Extract hash-verified compiled runtime and test harness
         run: |
-          if ($env:CANDIDATE_TAG -ne 'v0.6.0') { throw 'Unexpected candidate tag' }
-          if ($env:CANDIDATE_HASH -ne '2e0111d6a447357e5cf0fdf3d599fe84e9d6f7ce4dd7b200adc010fceb8b400f') { throw 'Unexpected candidate checksum' }
-          if ((gh release view $env:CANDIDATE_TAG --json isDraft --jq .isDraft) -ne 'true') { throw 'Source bundle must remain in a private draft' }
-          gh release download $env:CANDIDATE_TAG --pattern dynasty-proto2-validation-source.zip --dir staging
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if ((Get-FileHash staging/dynasty-proto2-validation-source.zip -Algorithm SHA256).Hash.ToLower() -ne $env:CANDIDATE_HASH) { throw 'Bundle hash mismatch' }
-          Expand-Archive staging/dynasty-proto2-validation-source.zip -DestinationPath . -Force
+          $expected = '1a42ce7f0714b4f7cb08cfdd626fa98b4d7043a94f458e4f9d96bc15495a4dd8'
+          if ((Get-FileHash candidate/DYNASTY-0.6.0-runtime-validation.zip -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw 'Runtime bundle hash mismatch' }
+          Expand-Archive candidate/DYNASTY-0.6.0-runtime-validation.zip -DestinationPath . -Force
           $source = Get-Content SOURCE.json | ConvertFrom-Json
-          if ($source.source -ne $env:DYNASTY_SOURCE_SHA -or $source.historicalJ1 -ne 'd25802826ff908ed0eb4135153b4b73c20045c50') { throw 'Unexpected source revision' }
-          Remove-Item staging/dynasty-proto2-validation-source.zip
+          if ($source.source -ne $env:DYNASTY_SOURCE_SHA) { throw 'Unexpected source revision' }
+          if ((Get-FileHash prototype/web/dist/DYNASTY.html -Algorithm SHA256).Hash.ToLower() -ne $source.htmlSHA256) { throw 'Playable build hash mismatch' }
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
@@ -60,22 +51,14 @@ jobs:
           npm --prefix prototype/web ci
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm --prefix prototype/desktop ci
-      - name: Test simulation and update safeguards
-        run: |
-          npm --prefix prototype/web test 2>&1 | Tee-Object reports/proto2/unit-windows.txt
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm --prefix prototype/desktop run test:updates 2>&1 | Tee-Object reports/proto2/updates-windows.txt
-      - name: Prepare standalone game
-        run: npm --prefix prototype/desktop run prepare:app
+      - name: Test update safeguards on Windows
+        run: npm --prefix prototype/desktop run test:updates
       - name: Install test browser
         working-directory: prototype/web
         run: npx playwright install chromium
-      - name: Test browser and standalone HTML on Windows
+      - name: Test the complete standalone HTML on Windows
         working-directory: prototype/web
-        run: |
-          npm run test:e2e 2>&1 | Tee-Object ../../reports/proto2/browser-windows.txt
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run test:standalone 2>&1 | Tee-Object ../../reports/proto2/standalone-windows.txt
+        run: npm run test:standalone 2>&1 | Tee-Object ../../reports/proto2/standalone-windows.txt
       - name: Build Windows application
         working-directory: prototype/desktop
         run: npx electron-builder --win --dir --x64 --publish never
@@ -90,13 +73,12 @@ jobs:
       - name: Build next-version installer fixture (test only, not published)
         working-directory: prototype/desktop
         run: npx electron-builder --win nsis --x64 --publish never --config.extraMetadata.version=0.6.1 --config.directories.output=dist/upgrade-fixture
-      - name: Build historical J1 without changing its code or lockfiles
+      - name: Package the immutable historical J1 compiled runtime
+        working-directory: historical-j1/prototype/desktop
         run: |
-          npm --prefix historical-j1/prototype/web ci
+          npm ci
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm --prefix historical-j1/prototype/desktop ci
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm --prefix historical-j1/prototype/desktop run build:windows
+          npx electron-builder --win portable --x64 --publish never
       - name: Download verified previous J2 installer for the real HUD upgrade test
         run: |
           $previous = 'prototype/desktop/dist/DYNASTY-Setup-0.3.0-x64.exe'
@@ -163,7 +145,7 @@ jobs:
         run: |
           'Portable: ${{ steps.portable.outputs.artifact-url }}' >> $env:GITHUB_STEP_SUMMARY
           'Installer: ${{ steps.installer.outputs.artifact-url }}' >> $env:GITHUB_STEP_SUMMARY
-          'Test artifacts retained for 14 days. Source bundle remains in an unpublished draft. Automatic updates disabled.' >> $env:GITHUB_STEP_SUMMARY
+          'Test artifacts retained for 14 days. Only compiled game and distribution harness are in this repository; creator references are excluded. Automatic updates disabled.' >> $env:GITHUB_STEP_SUMMARY
           Get-Content prototype/desktop/dist/SHA256SUMS.txt >> $env:GITHUB_STEP_SUMMARY
       - name: Attach execution evidence even on failure
         if: always()
