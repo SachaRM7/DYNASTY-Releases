@@ -158,3 +158,58 @@ jobs:
             prototype/web/test-results/
             prototype/desktop/dist/SHA256SUMS.txt
           retention-days: 14
+
+  publish-tested-distribution:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Download the Portable actually executed on Windows
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: DYNASTY-0.6.0-Portable-Windows-x64
+          path: portable
+      - name: Download the Installer actually executed on Windows
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: DYNASTY-0.6.0-Installer-Windows-x64
+          path: installer
+      - name: Verify files and prepare public archives without rebuilding
+        run: |
+          set -euo pipefail
+          (cd portable && sha256sum --check SHA256SUMS.txt)
+          (cd installer && sha256sum --check SHA256SUMS.txt)
+          mkdir downloads
+          cp portable/DYNASTY-0.6.0-Windows-x64.exe installer/DYNASTY-Setup-0.6.0-x64.exe downloads/
+          cp portable/LIRE-MOI.txt downloads/LIRE-MOI-PORTABLE.txt
+          cp installer/LIRE-MOI.txt downloads/LIRE-MOI-INSTALLER.txt
+          (cd portable && zip ../downloads/DYNASTY-0.6.0-Portable-Windows-x64.zip ./*)
+          (cd installer && zip ../downloads/DYNASTY-0.6.0-Installer-Windows-x64.zip ./*)
+          (cd downloads && sha256sum ./*.exe ./*.zip > SHA256SUMS.txt)
+      - name: Publish only after Windows tests succeed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test "$(gh release view v0.6.0 --json isDraft --jq .isDraft)" = true
+          test "$(gh release view v0.6.0 --json assets --jq '.assets | length')" = 0
+          cat > release-notes.md <<'NOTES'
+          DYNASTY 0.6.0 — Proto 2, campagne 1850–1855.
+
+          Quatre vies dans trois quartiers : activités, transports, grèves, filières, enquêtes, organisations et succession. Le laboratoire historique reste disponible. Paramètres expérimentaux, carte 2D, retours de jeu attendus.
+
+          Portable : extraire puis double-cliquer, sans installation.
+          Installer : fermer DYNASTY puis lancer Setup, sans désinstaller la version précédente.
+          Profil conservé : %APPDATA%\DYNASTY-Prototype. Exporter chaque scénario avant changement de version. Les anciennes parties Proto 2 v1 restent lisibles ; Réglages → Recommencer ouvre la nouvelle campagne en gardant un point de retour.
+
+          Exécutables non signés, mises à jour manuelles. Le SHA-256 contrôle les fichiers sans remplacer une signature Windows.
+          Code du jeu : a471bf88141f0a82e7651691181a7666f0c9cba3. Distribution : 91ac8582a6342afddf6e8de930f53a0b40c48d7a.
+          Jeu sans compte : https://dynasty-test-rouge.vercel.app/?scenario=proto2
+          NOTES
+          printf '\nValidation Windows : https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> release-notes.md
+          gh release upload v0.6.0 downloads/*
+          gh release edit v0.6.0 --title 'DYNASTY 0.6.0 — Proto 2 · Portable et Installer Windows' --notes-file release-notes.md --draft=false --prerelease
