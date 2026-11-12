@@ -1,0 +1,99 @@
+{
+  "from": "0.6.2",
+  "to": "0.6.3",
+  "channel": "public HTTPS",
+  "fromIsTestFixture": true,
+  "fixtureCompression": "store",
+  "checks": [
+    "Actual signed HTTPS NSIS update, declined then accepted restart; both complete saves identical",
+    "Actual relocated Portable replaced at confirmed close through helper; exact saves and enabled preference survive restart"
+  ],
+  "stages": [
+    {
+      "name": "Starting isolated Windows update journey",
+      "at": "2026-11-12T17:27:07.031Z"
+    },
+    {
+      "name": "Lower-version Portable and NSIS test fixtures built; target comes from the public release",
+      "at": "2026-11-12T17:28:54.061Z"
+    },
+    {
+      "name": "Public HTTPS metadata authenticated with the real embedded public key",
+      "at": "2026-11-12T17:28:54.348Z"
+    },
+    {
+      "name": "Initial NSIS application installed",
+      "at": "2026-11-12T17:29:12.334Z"
+    },
+    {
+      "name": "Creating real historical and Proto 2 saves",
+      "at": "2026-11-12T17:29:13.600Z"
+    },
+    {
+      "name": "Checking signed HTTPS update from the installed application",
+      "at": "2026-11-12T17:29:17.419Z"
+    },
+    {
+      "name": "Portable ready; closing the native window and confirming its real dialog",
+      "at": "2026-11-12T17:30:23.614Z"
+    },
+    {
+      "name": "Native Portable confirmation accepted; waiting for the authenticated replacement",
+      "at": "2026-11-12T17:30:26.297Z"
+    },
+    {
+      "name": "Portable target has the new signed hash; verifying the restarted game and saves",
+      "at": "2026-11-12T17:30:32.748Z"
+    }
+  ],
+  "platform": "win32",
+  "simulatedInstallation": false,
+  "feedUrl": "https://github.com/SachaRM7/DYNASTY-Releases/releases/download/windows-updates/update.json",
+  "assets": {
+    "installer": {
+      "name": "DYNASTY-Setup-0.6.3-x64.exe",
+      "size": 121497409,
+      "sha512": "9clmadfGiKb2ye18EcMzaSfUhmFLwpIMHYdHH1aV+iC0QJDjGIIsKlA24pqG3rpIEDbucjq20zI1tYIJDIHAUA==",
+      "url": "https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.6.3/DYNASTY-Setup-0.6.3-x64.exe"
+    },
+    "portable": {
+      "name": "DYNASTY-0.6.3-Windows-x64.exe",
+      "size": 110630908,
+      "sha512": "CkY48JS50f2ZxcsDusLy/0E5LNHC+6Ol5AEyAtr14t9BIT2llg+6iG+uIJ/YN5lQzO3WVMcbCSJy3YSEcT24iA==",
+      "url": "https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.6.3/DYNASTY-0.6.3-Windows-x64.exe"
+    }
+  },
+  "success": true,
+  "verifiedSourceCommit": "9dc7bb821984d8c00190d9ead2b961a3bdc12851",
+  "windowsRun": "https://github.com/SachaRM7/DINASTY/actions/runs/43269294996",
+  "windowsJobId": 131361202351,
+  "artifact": {
+    "id": 13967821639,
+    "sha256": "43100bddb84313ab657899037b538b6580bbdfae73aec398b893266c6dd9401b",
+    "expiresAt": "2026-11-26T17:30:57Z"
+  },
+  "note": "The starting 0.6.2 is a deliberately lower-version test fixture with the updater; older published clients require one manual installation. The target is the actual public 0.6.3 release. This authenticates our update packages and is not Microsoft Authenticode certification.",
+  "anonymousDownloads": {
+    "checkedAt": "2026-11-12T17:28:57.608Z",
+    "githubAuthenticationUsed": false,
+    "transport": "curl through the execution environment HTTPS proxy",
+    "manifestSignatureVerified": true,
+    "version": "0.6.3",
+    "downloads": [
+      {
+        "kind": "installer",
+        "url": "https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.6.3/DYNASTY-Setup-0.6.3-x64.exe",
+        "size": 121497409,
+        "sha256": "99dd749dcd49480980aafd55cbc136974c480d7c2bef72d362ce914e2ce80f5b",
+        "sha512": "9clmadfGiKb2ye18EcMzaSfUhmFLwpIMHYdHH1aV+iC0QJDjGIIsKlA24pqG3rpIEDbucjq20zI1tYIJDIHAUA=="
+      },
+      {
+        "kind": "portable",
+        "url": "https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.6.3/DYNASTY-0.6.3-Windows-x64.exe",
+        "size": 110630908,
+        "sha256": "6702ea3a93697c3ba65c6f5a093ba59adc3913d319432d59c1a3dae8d9ffddf9",
+        "sha512": "CkY48JS50f2ZxcsDusLy/0E5LNHC+6Ol5AEyAtr14t9BIT2llg+6iG+uIJ/YN5lQzO3WVMcbCSJy3YSEcT24iA=="
+      }
+    ]
+  }
+}

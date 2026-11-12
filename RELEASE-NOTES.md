@@ -24,3 +24,9 @@ Les sources documentaires privées ne sont pas incluses.
 
 `verification.json` identifie les fichiers testés et leurs preuves. Les fichiers
 publiés sont repris tels quels des tests Windows, sans reconstruction lors de la publication.
+
+Contrôle après publication : les deux distributions ont réellement téléchargé et
+installé cette version depuis le canal GitHub public sur Windows. Les sauvegardes
+complètes des deux scénarios et le réglage automatique sont conservés. Le départ
+0.6.2 est une version de test équipée du nouvel updater, pas une ancienne version
+publiée. [Résultat détaillé](https://github.com/SachaRM7/DYNASTY-Releases/blob/work/windows-auto-updates/PUBLIC-UPDATE-VERIFICATION.json).
