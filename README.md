@@ -1,32 +1,57 @@
 # DYNASTY — téléchargements Windows
 
-Distributions de test du prototype **DYNASTY: A Century of Power**.
+Distributions de test de **DYNASTY: A Century of Power**, Windows 10/11 x64.
 
-[Téléchargements et instructions](https://github.com/SachaRM7/DYNASTY-Releases/releases)
+## Version 0.6.3
 
-- **Portable** : ouvrir le fichier `.exe`, sans installation ; remplacer le fichier pour changer de version.
-- **Installer** : installation pour l'utilisateur courant, avec raccourci dans le menu Démarrer ; lancer la nouvelle version de l'installateur pour mettre à niveau.
+- [Portable, sans installation](https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.6.3/DYNASTY-0.6.3-Windows-x64.exe)
+- [Installer, raccourci dans le menu Démarrer](https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.6.3/DYNASTY-Setup-0.6.3-x64.exe)
+- [Archives ZIP, instructions et empreintes SHA-256](https://github.com/SachaRM7/DYNASTY-Releases/releases/tag/v0.6.3)
 
-Les deux versions partagent le profil `%APPDATA%\DYNASTY-Prototype` et l'origine `dynasty://game/`. Avant de changer de version, exporter la partie en JSON depuis **Sauvegardes et réglages**. Ne pas supprimer ce profil.
+Aucun compte GitHub, Node.js ou terminal n'est nécessaire pour jouer. Cette version
+conserve le Proto 2 (1850), accessible par « Explorer le Proto 2 · trois quartiers »,
+et le laboratoire historique J1–J4 (1852). Les paramètres de simulation restent
+expérimentaux ; ce n'est pas le jeu commercial complet.
 
-Les exécutables J4 0.5.0 sont des versions de test **non signées**, avec des mises à jour **manuelles**. Les sommes SHA-256 vérifient l'intégrité des fichiers ; elles ne remplacent pas une signature d'éditeur. Aucun compte GitHub, Node.js ou terminal n'est nécessaire pour jouer.
+## Mises à jour
 
-J4 ajoute des engagements de travail, personnels et de repos, des arbitrages entre obligations et des communications situées. Un personnage occupé peut différer un rendez-vous ; une consigne attend son destinataire au fournil, puis sa réponse est portée à pied. La réception d'une réponse dépend d'une rencontre réelle. Une absence de nouvelles ne prouve pas l'échec.
+Ouvrir **Sauvegardes et réglages → Mises à jour**.
 
-Les ressources du HUD J3.5 sont conservées : Argent, Capacité organisationnelle, Lignée et Notoriété en haut ; stocks de pain, farine et bois dans la boulangerie. Les trois indicateurs futurs affichent — sans statistique inventée. Argent et caisse représentent temporairement le même solde. Les relevés de stocks restent datés en cas d'absence.
+- Désactivées : le jeu vérifie uniquement sur demande, puis propose le téléchargement.
+- Activées : il recherche au lancement et toutes les six heures, puis télécharge en arrière-plan.
+- Une installation exige une confirmation et une sauvegarde réussie. Elle n'interrompt
+  pas une partie à l'improviste. Le Portable conserve son nom et son dossier.
 
-Le soutien délégué J3 et la simulation J1/J2 sont conservés. Le jeu propose les mandats individuels, le transport réel du pain, les refus, retards et livraisons partielles, ainsi que les comptes rendus localisés. Organisation, Ville et Pays restent à venir. Les paramètres du laboratoire restent expérimentaux.
+Les anciennes versions sans cet updater doivent être mises à niveau **une première
+fois manuellement**. Fermer DYNASTY, puis remplacer le Portable ou lancer le nouvel
+Installer, sans désinstallation préalable.
 
-Pour essayer : Relations → Collectif et contacts → Soutien délégué. Rencontrer Jules au fournil, proposer un mandat, puis préparer une livraison. Vous pouvez y laisser une consigne pendant la validité du mandat, annoncer le lieu de réponse et vous y rendre. Une mission acceptée n'est pas encore livrée ; les nouvelles dépendent de votre présence et des comptes rendus.
+Les exécutables n'ont pas de certificat d'éditeur Windows Authenticode. Windows peut
+afficher un avertissement. Les métadonnées de mise à jour sont signées Ed25519 et
+les fichiers téléchargés sont vérifiés avant installation. Aucun certificat payant
+ni abonnement n'est nécessaire à ce fonctionnement.
 
-Le format de sauvegarde est **v5**, avec lecture de v1/v2/v3/v4/v5. Passer de 0.4.1 à 0.5.0 conserve les parties et les missions J3 en cours ; les agendas et communications sont ajoutés sans remise à zéro. Les clés des anciennes sauvegardes sont conservées. Les applications antérieures ne savent pas ouvrir une v5 : conserver un export antérieur pour un retour de version. Fermer le jeu avant de remplacer le Portable ou de lancer le nouvel Installer ; ne pas désinstaller ni supprimer le profil. Le navigateur conserve un stockage séparé : utiliser l'export/import JSON pour transférer une partie.
+## Conserver ses parties
 
-Les releases 0.4.0 et 0.4.1 restent disponibles. Les deux distributions 0.5.0 partagent le même profil et le format v5. Les fichiers publiés correspondent aux fichiers exécutés sous Windows, sans reconstruction lors de la publication ; `verification.json` identifie le commit et les empreintes. Les paramètres sont expérimentaux : carte SVG, un collectif et laboratoire de 30 jours, pas encore le jeu commercial complet.
+Les deux distributions partagent `%APPDATA%\DYNASTY-Prototype` et l'origine
+`dynasty://game/`. Ne pas supprimer ce profil. Exporter chaque scénario en JSON
+avant une mise à niveau reste une solution de secours.
 
-- [Portable Windows x64](https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.5.0/DYNASTY-0.5.0-Windows-x64.exe)
-- [Installer Windows x64](https://github.com/SachaRM7/DYNASTY-Releases/releases/download/v0.5.0/DYNASTY-Setup-0.5.0-x64.exe)
-- [Archives ZIP, instructions et SHA-256](https://github.com/SachaRM7/DYNASTY-Releases/releases/tag/v0.5.0)
+Le laboratoire écrit v5 et lit v1–v5 ; le Proto 2 écrit v3 et lit v1/v2/v3 dans un
+stockage distinct. Le navigateur possède aussi son propre stockage : utiliser
+l'export/import pour transférer une partie du site vers l'application.
 
-Ce dépôt public est réservé aux distributions. Le dépôt de développement reste privé.
+Les versions précédentes restent disponibles dans les releases. Une ancienne
+application peut ne pas lire un format plus récent : garder ses exports antérieurs
+avant de revenir à une version précédente.
 
-[Version navigateur jouable](https://dynasty-test-rouge.vercel.app)
+`verification.json` identifie les fichiers effectivement testés sous Windows,
+leurs empreintes et les contrôles réalisés. Les fichiers publiés ne sont pas
+reconstruits après les tests. Les artefacts de test Actions sont conservés 14 jours ;
+les fichiers des releases ne sont pas soumis à cette expiration.
+
+Ce dépôt public contient les distributions et leurs instructions. Le dépôt source
+et les documents du créateur restent privés. Les travaux d'autres branches ne sont
+pas incorporés à cette distribution.
+
+[Version navigateur](https://dynasty-test-rouge.vercel.app/?scenario=proto2)

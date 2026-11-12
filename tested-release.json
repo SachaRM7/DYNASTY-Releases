@@ -1,0 +1,36 @@
+{
+  "version": "0.6.3",
+  "sourceCommit": "9dc7bb821984d8c00190d9ead2b961a3bdc12851",
+  "windowsTestsPassed": true,
+  "signingKeyVerified": true,
+  "automaticUpdatePassed": true,
+  "buildRun": "https://github.com/SachaRM7/DINASTY/actions/runs/43264471570/job/131344245272",
+  "tests": {
+    "gameUnit": 274,
+    "updaterSecurity": 24,
+    "browser": 82,
+    "nativeWindowsDistribution": true,
+    "saveMigrations": true
+  },
+  "artifacts": {
+    "portable": {
+      "artifactId": 13965489833,
+      "zipSHA256": "c0db6dd8f34492e209f27cf3e03c28ff4a67147dc485b1c455f4939176902e2e",
+      "exeSHA256": "6702ea3a93697c3ba65c6f5a093ba59adc3913d319432d59c1a3dae8d9ffddf9"
+    },
+    "installer": {
+      "artifactId": 13966279164,
+      "zipSHA256": "0782f598e15143ff9fb0fa987506a238661fb3f3f3f064113ae97d3d76960d4c",
+      "exeSHA256": "99dd749dcd49480980aafd55cbc136974c480d7c2bef72d362ce914e2ce80f5b"
+    }
+  },
+  "automaticUpdateRun": "https://github.com/SachaRM7/DINASTY/actions/runs/43264471570/job/131344246270",
+  "automaticUpdateScope": {
+    "from": "0.6.3",
+    "to": "0.6.4",
+    "channel": "local HTTPS",
+    "testFixtures": true,
+    "realInstallation": true,
+    "completeSaveEquality": true
+  }
+}

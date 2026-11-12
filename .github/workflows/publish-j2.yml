@@ -1,4 +1,4 @@
-name: Publish verified J4 downloads
+name: Publish verified signed Windows downloads
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: publish-j4-0.5.0
+  group: dynasty-signed-windows-channel
   cancel-in-progress: false
 
 jobs:
@@ -29,17 +29,35 @@ jobs:
         env:
           DYNASTY_PORTABLE_URL: ${{ inputs.portable_url }}
           DYNASTY_INSTALLER_URL: ${{ inputs.installer_url }}
-        run: python3 scripts/prepare-j4-downloads.py
-      - name: Attach files to the existing draft without replacing assets
+        run: python3 scripts/prepare-signed-downloads.py
+      - name: Read the verified version
+        run: |
+          python3 - <<'PYVERSION'
+          import json, os
+          version = json.load(open("tested-release.json"))["version"]
+          with open(os.environ["GITHUB_ENV"], "a") as output:
+              output.write("DYNASTY_TAG=v" + version + "\n")
+          PYVERSION
+      - name: Attach exact tested files to a draft
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          test "$(gh release view v0.5.0 --json isDraft --jq .isDraft)" = true
-          gh release upload v0.5.0 downloads/*
-      - name: Publish tested prototype release
+          if ! gh release view "$DYNASTY_TAG" >/dev/null 2>&1; then
+            gh release create "$DYNASTY_TAG" --target "$GITHUB_SHA" --draft --prerelease --title "DYNASTY ${DYNASTY_TAG#v} — Windows et mises à jour" --notes-file RELEASE-NOTES.md
+          fi
+          test "$(gh release view "$DYNASTY_TAG" --json isDraft --jq .isDraft)" = true
+          gh release upload "$DYNASTY_TAG" downloads/*
+      - name: Publish the binaries before the update metadata
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release edit v0.5.0 --draft=false --prerelease
+        run: |
+          set -euo pipefail
+          gh release edit "$DYNASTY_TAG" --draft=false --prerelease
+          if ! gh release view windows-updates >/dev/null 2>&1; then
+            gh release create windows-updates --target "$GITHUB_SHA" --draft --prerelease --title "Canal Windows de test — mises à jour signées" --notes "Métadonnées Ed25519 pour les distributions Windows DYNASTY. Les exécutables sont dans les releases versionnées."
+          fi
+          gh release upload windows-updates downloads/update.json --clobber
+          gh release edit windows-updates --draft=false --prerelease
